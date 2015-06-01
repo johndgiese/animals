@@ -30,25 +30,17 @@ instance Show Square where
     show (Square squareType (Just animal)) = show animal
 
 instance Show World where
-    show (World time grid) = unlines $ [" " ++ show time] ++ rows where
+    show (World time fate grid) = unlines $ [" " ++ show time] ++ rows where
         rows = map (unwords . map show) grid
 
 
 size :: [[a]] -> (Int, Int)
 size list = (nx, ny) where
-    nx = length $ head grid - 1  -- assumes nested lists have same length
-    ny = length grid - 1
+    nx = length $ head list  -- assumes nested lists have same length
+    ny = length list
 
 surroundWith :: a -> [a] -> [a]
-surroundWith element list = reverse $ element:(reverse $ element:list))
-
-randomRn :: (RandomGen g, Random a, Num n) => g -> n -> (a, a) -> ([a], g)
-randomRn gen 0 _ = ([], gen)
-randomRn gen n range =
-    let (value, newGen) = randomR range gen
-        (restOfList, finalGen) = randomRn (n - 1) range newGen
-    in  (value:restOfList, finalGen)
-
+surroundWith element list = reverse $ element:(reverse $ element:list)
 
 --decide :: World -> Animal -> Action
 
@@ -56,25 +48,20 @@ randomRn gen n range =
 
 --step :: World -> World
 
-newWorld :: Int -> Int -> Int -> Int -> World
-newWorld seed nx ny numAnimals = World time fate' grid where
+surroundWithSq :: Square -> Grid -> Grid
+surroundWithSq square innerGrid = grid where
+    gridWithSides = map (surroundWith square) innerGrid
+    lengthWithSides = length $ head gridWithSides
+    rowOfWalls = replicate lengthWithSides square
+    grid = surroundWith rowOfWalls gridWithSides
+
+newWorld :: Int -> Int -> Int -> World
+newWorld seed nx ny = World time fate grid where
     time = 0
     fate = mkStdGen seed
     innerGrid = replicate ny $ replicate nx (Square Grass Nothing)
-    (innerGridWithAnimals, fate') = populateWithAnimals fate numAnimals innerGrid
-    grid = surroundWithWalls innerGridWithAnimals
-
-surroundWithWalls :: Grid -> Grid
-surroundWithWalls innerGrid = grid where
     wall = Square Wall Nothing
-    gridWithSideWalls = map (surroundWith wall) innerGrid
-    rowOfWalls = replicate (length (head gridWithSideWalls)) wall
-    grid = surroundWith rowOfWalls gridWithSideWalls
-
-populateWithAnimals :: StdGen -> Int -> Grid -> (Grid, StdGen)
-populateWithAnimals fate numAnimals grid = (gridWithAnimals, fate') where
-    (nx, ny) = size grid
-
+    grid = surroundWithSq wall innerGrid
 
 main = do
-    putStr $ show $ newWorld 1 10 10 3
+    putStr $ show $ newWorld 1 10 10
